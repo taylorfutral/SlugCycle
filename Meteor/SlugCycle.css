@@ -1,7 +1,18 @@
 /* CSS declarations go here */
 
+html, body{
+  height:100%;
+}
+
 .map-container {
-  width: 100%;
-  max-width: 100%;
-  height: 500px;
+  min-height: 320px;
+  height: 100% !important;
+}
+
+.header {
+    text-align: center;
+}
+
+.toolbar .btn {
+    width: 100%;
 }

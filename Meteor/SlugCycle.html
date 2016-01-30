@@ -3,16 +3,34 @@
 </head>
 
 <body>
-  <h1>Welcome to Meteor!</h1>
-  {{> map}}
+    {{> header}}
+    {{> map}}
 </body>
 
+<template name="header">
+    <div class="header row">
+        <h1>Welcome to SlugCycle!</h1>
+    </div>
+</template>
+
+<template name="toolbar">
+    <div class="toolbar col-md-1 col-md-offset-1">
+        <a class="btn btn-default" href="#" role="button">Add Marker</a>
+        <a class="btn btn-default" href="#" role="button">Remove Marker</a>
+    </div>
+</template>
+
 <template name="map">  
-  <div class="map-container">
-    {{#unless geolocationError}}
-      {{> googleMap name="map" options=mapOptions}}
-    {{else}}
-      Geolocation failed: {{geolocationError}}
-    {{/unless}}
-  </div>
+    <div class="row" style="height:100% !important;">
+        <div class="container-fluid" style="height:100% !important;">
+            {{> toolbar}}
+      <div class="map-container col-md-8">
+            {{#unless geolocationError}}
+              {{> googleMap name="map" options=mapOptions}}
+            {{else}}
+              Geolocation failed: {{geolocationError}}
+            {{/unless}}
+          </div>
+        </div>
+    </div>
 </template> 
