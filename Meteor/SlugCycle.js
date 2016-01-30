@@ -3,15 +3,31 @@ if (Meteor.isClient) {
     GoogleMaps.load();
   }); 
 
-Template.map.helpers({  
-  mapOptions: function() {
-    if (GoogleMaps.loaded()) {
-      return {
-        center: new google.maps.LatLng(-37.8136, 144.9631),
-        zoom: 8
-      };
-    }
-  }
+Template.map.onCreated(function() {
+    console.log("map creation");
+  var self = this;
+    //Callback activates when the map is loaded.
+    GoogleMaps.ready('map', function(map) {
+        console.log("map ready");
+        var marker;
+        self.autorun(function() {
+          var latLng = Geolocation.latLng();
+          if (! latLng)
+            return;
+
+          if (! marker) {
+            marker = new google.maps.Marker({
+              position: new google.maps.LatLng(latLng.lat, latLng.lng),
+              map: map.instance
+            });
+            map.instance.setCenter(marker.getPosition());
+            map.instance.setZoom(MAP_ZOOM);
+          }
+          else {
+            marker.setPosition(latLng);
+          }
+        });
+      });
 });
 }
 
