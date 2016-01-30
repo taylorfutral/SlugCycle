@@ -1,14 +1,15 @@
 <head>
-  <title>hack_ucsc_2016</title>
+  <title>SlugCycle - Hack UCSC 2016</title>
 </head>
 
 <body>
   <h1>Welcome to Meteor!</h1>
 
-  {{> hello}}
+  {{> map}}
 </body>
 
-<template name="hello">
-  <button>Click Me</button>
-  <p>You've pressed the button {{counter}} times.</p>
-</template>
+<template name="map">  
+  <div class="map-container">
+    {{> googleMap name="map" options=mapOptions}}
+  </div>
+</template> 
