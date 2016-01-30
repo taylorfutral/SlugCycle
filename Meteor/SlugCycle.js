@@ -3,6 +3,6 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer) {
   Meteor.startup(function () {
-    Waypoints = new Mongo.Collection('waypoints');
+    
   });
 }
