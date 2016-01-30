@@ -1,0 +1,1 @@
+Waypoints = new Mongo.Collection('points');
