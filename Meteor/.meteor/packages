@@ -21,3 +21,4 @@ insecure                # Allow all DB writes from clients (for prototyping)
 dburles:google-maps
 mdg:geolocation
 mizzao:bootstrap-3
+http

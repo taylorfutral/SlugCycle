@@ -106,7 +106,7 @@ Template.map.onCreated(function() {
                 args.tool.map_clicked(args.event);
             }
         });
-        
+                
         //Marker only updates if user's position changes.
         self.streams.user_marker = self.streams.user_location.skipDuplicates(function(prev,next){
             return !!prev && (prev.lat == next.lat && prev.lng == next.lng);
@@ -126,9 +126,12 @@ Template.map.onCreated(function() {
             return marker;
         }).onValue(function(marker){
             if (marker){
+                //This will be replaced with a form letting the user specify a phone number.
                 map.instance.setCenter(marker.position);
                 map.instance.setZoom(12);
             }
         });
+        
+        //Meteor.call("send_SMS", "8313255847", marker.position.toString());
     });
 });
