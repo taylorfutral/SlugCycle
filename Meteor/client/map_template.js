@@ -108,9 +108,10 @@ Template.map.onCreated(function() {
         });
                 
         //Marker only updates if user's position changes.
-        self.streams.user_marker = self.streams.user_location.skipDuplicates(function(prev,next){
+        self.streams.user_location_changes = self.streams.user_location.skipDuplicates(function(prev,next){
             return !!prev && (prev.lat == next.lat && prev.lng == next.lng);
-        }).scan(undefined, function(marker, latLng){
+        });
+        self.streams.user_marker = self.streams.user_location_changes.scan(undefined, function(marker, latLng){
             if (!!latLng){
                 if (!marker){
                     var map_pos = new google.maps.LatLng(latLng.lat, latLng.lng);
@@ -131,7 +132,21 @@ Template.map.onCreated(function() {
                 map.instance.setZoom(12);
             }
         });
-        
+
+        self.streams.waypoint_added.combine(self.streams.user_location_changes,function(waypoint, user_location){
+            var waypoint_location = {lat: waypoint.lat, lng: waypoint.lng};
+            console.log(waypoint_location);
+            console.log(user_location);
+            var lat_dist = waypoint_location.lat - user_location.lat;
+            var lng_dist = waypoint_location.lng - user_location.lng;
+            return Math.sqrt(
+                (lat_dist * lat_dist) +
+                (lng_dist * lng_dist)
+            );
+        }).onValue(function(distance){
+            console.log("sending SMS from client:"+distance);
+            Meteor.call("send_SMS", "9253213959", distance.toString());            
+        });
         //Meteor.call("send_SMS", "8313255847", marker.position.toString());
     });
 });
