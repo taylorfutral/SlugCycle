@@ -15,15 +15,20 @@
 
 <template name="toolbar">
     <div class="toolbar col-md-1 col-md-offset-1">
-        <a class="btn btn-default" href="#" role="button">Add Marker</a>
-        <a class="btn btn-default" href="#" role="button">Remove Marker</a>
+      {{#each tools}}
+        {{> tool}}
+      {{/each}}
     </div>
+</template>
+
+<template name="tool">
+    <a class="btn btn-default" href="#" role="button">{{text}}</a>
 </template>
 
 <template name="map">  
     <div class="row" style="height:100% !important;">
         <div class="container-fluid" style="height:100% !important;">
-            {{> toolbar}}
+            {{> toolbar }}
       <div class="map-container col-md-8">
             {{#unless geolocationError}}
               {{> googleMap name="map" options=mapOptions}}

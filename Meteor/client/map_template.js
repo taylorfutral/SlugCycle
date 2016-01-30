@@ -76,10 +76,6 @@ Template.map.onCreated(function() {
         self.streams.map_clicked = Bacon.fromBinder(function(sink){
             google.maps.event.addListener(map.instance, 'click', sink);
         });
-        self.streams.map_clicked.onValue(function(event) {
-            Waypoints.insert({ lat: event.latLng.lat(), lng: event.latLng.lng() });
-        });
-        
         //Handles the marker used for the user's current location.
         var user_marker;
         self.streams.user_location = Bacon.fromBinder(function(sink){
@@ -87,6 +83,29 @@ Template.map.onCreated(function() {
                 sink(Geolocation.latLng());
             });
         }).toProperty();
+        
+        //Holds the tool currently in use.
+        self.streams.current_tool = Bacon.fromBinder(function(sink){
+            Deps.autorun(function () {
+              sink(Session.get('map.current_tool'));
+            });
+        }).map(function(key){
+            return tools[key];
+        }).filter(function(tool){
+            return !!tool;
+        }).toProperty().log("Current Tool:");
+        
+        //Link up the current tool with the map events.
+        self.streams.current_tool.sampledBy(self.streams.map_clicked, function(tool, event){
+            return {
+                event: event,
+                tool: tool
+            };
+        }).onValue(function(args){
+            if (!_.isUndefined(args.tool) && _.isFunction(args.tool.map_clicked)){
+                args.tool.map_clicked(args.event);
+            }
+        });
         
         //Marker only updates if user's position changes.
         self.streams.user_marker = self.streams.user_location.skipDuplicates(function(prev,next){
