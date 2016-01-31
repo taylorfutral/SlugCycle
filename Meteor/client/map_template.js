@@ -1,3 +1,10 @@
+﻿/** Polyfill: Converts numeric degrees to radians */
+if (typeof(Number.prototype.toRadians) === "undefined") {
+  Number.prototype.toRadians = function() {
+    return this * Math.PI / 180;
+  }
+}
+
 Meteor.startup(function () {
   console.log("loading map");
   GoogleMaps.load({key: "AIzaSyBcb6I-kviQrKAqUadr05nQoCW7dOTZb2k"});
@@ -236,11 +243,25 @@ Template.map.onCreated(function() {
         
         //Handles SMS messages whenever the user adds or changes a marker.
         self.streams.waypoint_recent.combine(self.streams.user_location_changes,function(waypoint, user_location){
-            var waypoint_location = {lat: waypoint.lat, lng: waypoint.lng};
-            return waypoint_location;
-        }).onValue(function(distance){
-            console.log("sending SMS from client:"+distance);
-            Meteor.call("send_SMS", "8313255847", distance.toString());            
+			// Latitude/Longitude algorithm adapted from http://www.movable-type.co.uk/scripts/latlong.html
+			var R = 20925524.9; // radius of the Earth in feet
+			var φ1 = waypoint.lat.toRadians();
+			var φ2 = user_location.lat.toRadians();
+			var Δφ = (user_location.lat-waypoint.lat).toRadians();
+			var Δλ = (user_location.lng-waypoint.lng).toRadians();
+
+			var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+					Math.cos(φ1) * Math.cos(φ2) *
+					Math.sin(Δλ/2) * Math.sin(Δλ/2);
+			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+			var d = R * c;
+            return {
+				distance:Math.floor(d)
+			};
+        }).bufferingThrottle(1000.0).onValue(function(args){
+            console.log("sending SMS from client:",args);
+            Meteor.call("send_SMS", "8317138143", "Hazard approx. "+args.distance+" feet away.");            
         });
         //Meteor.call("send_SMS", "8313255847", marker.position.toString());
     });
