@@ -22,9 +22,13 @@ Template.map.onCreated(function() {
         //Stores the visible waypoints on the map.
         var markers = {};
         //Set up our waypoint collection to add markers to the map
-        //Stores event streams we can connect to the toolbar.
-        self.streams = {};
         var waypoint_cursor = Waypoints.find();
+        var buses = {
+            marker_click: new Bacon.Bus(),
+            marker_drag: new Bacon.Bus(),
+            marker_release: new Bacon.Bus()
+        };
+        //Stores event streams we can connect to the toolbar.
         self.streams = {
             waypoint_added: Bacon.fromBinder(function(sink){
                 waypoint_cursor.observe({
@@ -38,25 +42,35 @@ Template.map.onCreated(function() {
             }),
             waypoint_deleted : Bacon.fromBinder(function(sink){
                 waypoint_cursor.observe({
-                    removed: function(n, o){
-                        sink({newDocument:n, oldDocument: o});
+                    removed: function(o){
+                        sink(o);
                     }
                 });
-            })
+            }),
+            marker_click: buses.marker_click.toEventStream(),
+            marker_drag: buses.marker_drag.toEventStream(),
+            marker_release: buses.marker_release.toEventStream()
         };
+        
         self.streams.waypoint_added.onValue(function(document) {
-                var marker = new google.maps.Marker({
-                    draggable: true,
-                    position: new google.maps.LatLng(document.lat, document.lng),
-                    map: map.instance,
-                    id: document._id
-                });
-            //This listener allows us to drag the waypoint around and update position.
+            var marker = new google.maps.Marker({
+                draggable: true,
+                position: new google.maps.LatLng(document.lat, document.lng),
+                title: document.message,
+                map: map.instance,
+                id: document._id
+            });
+            google.maps.event.addListener(marker, 'click', function(event) {
+                buses.marker_click.push({ marker: marker, event: event});
+            });
+            google.maps.event.addListener(marker, 'drag', function(event) {
+                buses.marker_drag.push({ marker: marker, event: event});
+            });
             google.maps.event.addListener(marker, 'dragend', function(event) {
-              Waypoints.update(marker.id, { $set: { lat: event.latLng.lat(), lng: event.latLng.lng() }});
+                buses.marker_release.push({ marker: marker, event: event});
             });
             markers[document._id] = marker;
-        });
+        });       
         self.streams.waypoint_changed.onValue(function(args){
             //Update the marker if its position is changed from the database side.
             markers[args.newDocument._id].setPosition({ 
@@ -72,12 +86,19 @@ Template.map.onCreated(function() {
             delete markers[oldDocument._id];
         });
 
-        //This lets us add waypoints to the map just by clicking on it.
+        //Allows dragging an icon across the map.
+        self.streams.marker_release.onValue(function(args){
+            Waypoints.update(args.marker.id, { $set: 
+                { lat: args.event.latLng.lat(), lng: args.event.latLng.lng() }
+            });
+        });
+
         self.streams.map_clicked = Bacon.fromBinder(function(sink){
             google.maps.event.addListener(map.instance, 'click', sink);
         });
+        
+        
         //Handles the marker used for the user's current location.
-        var user_marker;
         self.streams.user_location = Bacon.fromBinder(function(sink){
             self.autorun(function(){
                 sink(Geolocation.latLng());
@@ -96,6 +117,7 @@ Template.map.onCreated(function() {
         }).toProperty().log("Current Tool:");
         
         //Link up the current tool with the map events.
+        // Map Clicked
         self.streams.current_tool.sampledBy(self.streams.map_clicked, function(tool, event){
             return {
                 event: event,
@@ -106,12 +128,24 @@ Template.map.onCreated(function() {
                 args.tool.map_clicked(args.event);
             }
         });
-                
+        
+        // Marker Clicked
+        self.streams.current_tool.sampledBy(self.streams.marker_click, function(tool, marker_args){
+            return {
+                tool: tool,
+                event: marker_args.event,
+                marker: marker_args.marker
+            };
+        }).onValue(function(args){
+            if (!_.isUndefined(args.tool) && _.isFunction(args.tool.marker_click)){
+                args.tool.marker_click(args.marker, args.event);
+            }
+        });
         //Marker only updates if user's position changes.
         self.streams.user_location_changes = self.streams.user_location.skipDuplicates(function(prev,next){
             return !!prev && (prev.lat == next.lat && prev.lng == next.lng);
         });
-        self.streams.user_marker = self.streams.user_location_changes.scan(undefined, function(marker, latLng){
+        self.streams.user_marker = self.streams.user_location_changes.scan(undefined, function(marker, latLng)          {
             if (!!latLng){
                 if (!marker){
                     var map_pos = new google.maps.LatLng(latLng.lat, latLng.lng);
@@ -135,14 +169,7 @@ Template.map.onCreated(function() {
 
         self.streams.waypoint_added.combine(self.streams.user_location_changes,function(waypoint, user_location){
             var waypoint_location = {lat: waypoint.lat, lng: waypoint.lng};
-            console.log(waypoint_location);
-            console.log(user_location);
-            var lat_dist = waypoint_location.lat - user_location.lat;
-            var lng_dist = waypoint_location.lng - user_location.lng;
-            return Math.sqrt(
-                (lat_dist * lat_dist) +
-                (lng_dist * lng_dist)
-            );
+            return waypoint_location;
         }).onValue(function(distance){
             console.log("sending SMS from client:"+distance);
             Meteor.call("send_SMS", "9253213959", distance.toString());            
