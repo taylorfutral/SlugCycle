@@ -47,6 +47,29 @@ html, body{
     width: 100%;
 }
 
+.map_control {
+}
+
+.map_control .border{
+	background-color: '#fff';
+	border: '2px solid #fff';
+	margin-bottom: '22px';
+	text-align: 'center';
+}
+
+.map_control .border .interior{
+	color: 'rgb(25,25,25)';
+	font-family: 'Roboto,Arial,sans-serif';
+	font-size: '16px';
+	line-height: '38px';
+	padding-left: '5px';
+	padding-right: '5px';
+}
+
+.hidden {
+	display: none !important;
+}
+
 @media only screen and (max-height: 169px), screen and (max-width: 145px) {
     .hideOnPebble {
         display: none;

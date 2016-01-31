@@ -1,3 +1,14 @@
+default_behavior = {
+	marker_click: function(marker, event){
+		Session.set("map.current_marker", marker);
+	},
+	marker_release: function(marker, event){
+		Waypoints.update(marker.id, { $set: 
+			{ lat: event.latLng.lat(), lng: event.latLng.lng() }
+		});
+	}
+};
+
 tools = {
     add_marker: { text: "Add Marker", 
         map_clicked: function(event) {
@@ -20,7 +31,7 @@ tools = {
 }
 
 Template.toolbar.helpers({
-    tools: _.map(_.keys(tools), function(key){
+    tool_buttons: _.map(_.omit(_.keys(tools), "default_behavior"), function(key){
         return {
             key: key,
             text: tools[key].text

@@ -20,7 +20,7 @@
 
 <template name="toolbar">
     <ul id = "menu">
-      {{#each tools}}
+      {{#each tool_buttons}}
         <li>{{> tool}}</li>
       {{/each}}
     </ul>
@@ -36,6 +36,7 @@
       <div class="map-container col-md-8 col-md-offset-2">
             {{#unless geolocationError}}
               {{> googleMap name="map" options=mapOptions}}
+			  {{> marker_editor}}
             {{else}}
               Geolocation failed: {{geolocationError}}
             {{/unless}}
@@ -43,3 +44,11 @@
         </div>
     </div>
 </template> 
+
+<template name="marker_editor">
+	<div class="map_control">
+		<div class="border">
+			<div class="interior">Hello World!</div>
+		</div>
+x	</div>
+</template>

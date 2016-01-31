@@ -37,7 +37,9 @@ Template.map.onCreated(function() {
             }),
             waypoint_changed : Bacon.fromBinder(function(sink){
                 waypoint_cursor.observe({
-                    changed: sink
+                    changed: function(next,prev){
+						sink({oldDocument:prev, newDocument:next});
+					}
                 });
             }),
             waypoint_deleted : Bacon.fromBinder(function(sink){
@@ -70,7 +72,8 @@ Template.map.onCreated(function() {
                 buses.marker_release.push({ marker: marker, event: event});
             });
             markers[document._id] = marker;
-        });       
+        });
+		
         self.streams.waypoint_changed.onValue(function(args){
             //Update the marker if its position is changed from the database side.
             markers[args.newDocument._id].setPosition({ 
@@ -78,25 +81,20 @@ Template.map.onCreated(function() {
                 lng: args.newDocument.lng
             });
         });
+		
         self.streams.waypoint_deleted.onValue(function(oldDocument) {
             //Remove the marker from the map now that we're done with it.
-            markers[oldDocument._id].setMap(null);
-            google.maps.event.clearInstanceListeners(
-              markers[oldDocument._id]);
-            delete markers[oldDocument._id];
-        });
-
-        //Allows dragging an icon across the map.
-        self.streams.marker_release.onValue(function(args){
-            Waypoints.update(args.marker.id, { $set: 
-                { lat: args.event.latLng.lat(), lng: args.event.latLng.lng() }
-            });
+			if (oldDocument){
+				markers[oldDocument._id].setMap(null);
+				google.maps.event.clearInstanceListeners(
+				  markers[oldDocument._id]);
+				delete markers[oldDocument._id];
+			}
         });
 
         self.streams.map_clicked = Bacon.fromBinder(function(sink){
             google.maps.event.addListener(map.instance, 'click', sink);
         });
-        
         
         //Handles the marker used for the user's current location.
         self.streams.user_location = Bacon.fromBinder(function(sink){
@@ -114,7 +112,7 @@ Template.map.onCreated(function() {
             return tools[key];
         }).filter(function(tool){
             return !!tool;
-        }).toProperty().log("Current Tool:");
+        }).toProperty(undefined);
         
         //Link up the current tool with the map events.
         // Map Clicked
@@ -126,7 +124,9 @@ Template.map.onCreated(function() {
         }).onValue(function(args){
             if (!_.isUndefined(args.tool) && _.isFunction(args.tool.map_clicked)){
                 args.tool.map_clicked(args.event);
-            }
+            } else if (args.event){
+				default_behavior.map_clicked(args.event);
+			}
         });
         
         // Marker Clicked
@@ -137,14 +137,37 @@ Template.map.onCreated(function() {
                 marker: marker_args.marker
             };
         }).onValue(function(args){
-            if (!_.isUndefined(args.tool) && _.isFunction(args.tool.marker_click)){
-                args.tool.marker_click(args.marker, args.event);
-            }
+			if (args.marker){
+				if (!_.isUndefined(args.tool) && _.isFunction(args.tool.marker_click)){
+					args.tool.marker_click(args.marker, args.event);
+				} else if (args.event){
+					default_behavior.marker_clicked(args.marker, args.event);
+				}
+			}
         });
+		
+		// Marker Released
+        self.streams.current_tool.sampledBy(self.streams.marker_release, function(tool, marker_args){
+            return {
+                tool: tool,
+                event: marker_args.event,
+                marker: marker_args.marker
+            };
+        }).onValue(function(args){
+			if (args.marker){
+				if (!_.isUndefined(args.tool) && _.isFunction(args.tool.marker_release)){
+					args.tool.marker_release(args.marker, args.event);
+				} else if (args.event){
+					default_behavior.marker_release(args.marker, args.event);
+				}
+			}
+        });
+		
         //Marker only updates if user's position changes.
         self.streams.user_location_changes = self.streams.user_location.skipDuplicates(function(prev,next){
             return !!prev && (prev.lat == next.lat && prev.lng == next.lng);
         });
+		
         self.streams.user_marker = self.streams.user_location_changes.scan(undefined, function(marker, latLng)          {
             if (!!latLng){
                 if (!marker){
@@ -167,7 +190,12 @@ Template.map.onCreated(function() {
             }
         });
 
-        self.streams.waypoint_added.combine(self.streams.user_location_changes,function(waypoint, user_location){
+		self.streams.waypoint_recent = self.streams.waypoint_added.merge(
+			self.streams.waypoint_changed.map(function(args){
+				return args.newDocument;
+			})
+		).log("Recent Waypoint:");
+        self.streams.waypoint_recent.combine(self.streams.user_location_changes,function(waypoint, user_location){
             var waypoint_location = {lat: waypoint.lat, lng: waypoint.lng};
             return waypoint_location;
         }).onValue(function(distance){
