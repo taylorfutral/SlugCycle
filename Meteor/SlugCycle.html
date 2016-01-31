@@ -12,21 +12,17 @@
     <h1 id="title">Welcome to SlugCycle!</h1>
     <img src="http://dreamatico.com/data_images/bike/bike-3.jpg" width="70">
     <br><br>
-    <ul id="menu">
-        <li><a href="">Add Marker</a></li>
-        <li><a href="">Remove Marker</a></li>
-       
-    </ul>
+	{{> toolbar}}
     
     </div>
 </template>
 
 <template name="toolbar">
-    <div class="toolbar col-md-1 col-md-offset-1">
+    <ul id = "menu">
       {{#each tools}}
-        {{> tool}}
+        <li>{{> tool}}</li>
       {{/each}}
-    </div>
+    </ul>
 </template>
 
 <template name="tool">
@@ -36,8 +32,7 @@
 <template name="map">  
     <div class="row" style="height:100% !important;">
         <div class="container-fluid" style="height:100% !important;">
-            {{> toolbar }}
-      <div class="map-container col-md-8">
+      <div class="map-container col-md-8 col-md-offset-2">
             {{#unless geolocationError}}
               {{> googleMap name="map" options=mapOptions}}
             {{else}}
