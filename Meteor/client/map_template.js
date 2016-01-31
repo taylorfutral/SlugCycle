@@ -19,6 +19,9 @@ Template.map.onCreated(function() {
     var self = this;
     //Callback activates when the map is loaded.
     GoogleMaps.ready('map', function(map) {
+        //Store a variable linking to the map's projection.
+        var projection = map.instance.getProjection();
+        console.log(projection);
         //Stores the visible waypoints on the map.
         var markers = {};
         //Set up our waypoint collection to add markers to the map
@@ -163,7 +166,44 @@ Template.map.onCreated(function() {
 			}
         });
 		
-        //Marker only updates if user's position changes.
+        // Keeps track of current marker.
+        self.streams.current_marker_id = Bacon.fromBinder(function(sink){
+            Deps.autorun(function () {
+              sink(Session.get('map.current_marker'));
+            });
+        });
+        
+        self.streams.waypoint_deleted.sampledBy(self.streams.current_marker_id, function(deleted, current_id){
+            return current_id != "" && deleted._id == current_id;
+        }).onValue(function(deleted_current){
+            if (deleted_current)
+                Session.set("map.current_marker", "");
+        });
+        self.streams.current_marker_db = self.streams.current_marker_id.flatMapLatest(function(id){
+            if (id == "") return Bacon.once(undefined);
+            //First see if we already have the marker in the database.
+            var existing = Waypoints.findOne(id);
+            if (existing){
+                return Bacon.once(existing);
+            } else {
+                return self.streams.waypoint_added.filter(function(document){
+                    return document._id == id;
+                });
+            }
+        }).log("Current Marker:");    
+
+        self.info_window = new google.maps.InfoWindow();
+        self.streams.current_marker_db.onValue(function(document){
+            if (document != null){
+                var content = Blaze.toHTMLWithData(Template.marker_editor, document);
+                var marker = markers[document._id];
+                self.info_window.setContent(content);
+                self.info_window.open(map.instance, marker);
+            } else {
+                self.info_window.close();
+            }
+        });
+        //User marker only updates if user's position changes.
         self.streams.user_location_changes = self.streams.user_location.skipDuplicates(function(prev,next){
             return !!prev && (prev.lat == next.lat && prev.lng == next.lng);
         });
@@ -184,9 +224,7 @@ Template.map.onCreated(function() {
             return marker;
         }).onValue(function(marker){
             if (marker){
-                //This will be replaced with a form letting the user specify a phone number.
                 map.instance.setCenter(marker.position);
-                map.instance.setZoom(12);
             }
         });
 
@@ -195,12 +233,14 @@ Template.map.onCreated(function() {
 				return args.newDocument;
 			})
 		).log("Recent Waypoint:");
+        
+        //Handles SMS messages whenever the user adds or changes a marker.
         self.streams.waypoint_recent.combine(self.streams.user_location_changes,function(waypoint, user_location){
             var waypoint_location = {lat: waypoint.lat, lng: waypoint.lng};
             return waypoint_location;
         }).onValue(function(distance){
             console.log("sending SMS from client:"+distance);
-            Meteor.call("send_SMS", "9253213959", distance.toString());            
+            Meteor.call("send_SMS", "8313255847", distance.toString());            
         });
         //Meteor.call("send_SMS", "8313255847", marker.position.toString());
     });

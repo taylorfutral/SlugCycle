@@ -1,4 +1,8 @@
 Template.marker_editor.onCreated(function() {
-    var self = this;
-	
+    console.log(this);
 });
+/*
+Template.marker_editor.events({
+    
+});
+*/

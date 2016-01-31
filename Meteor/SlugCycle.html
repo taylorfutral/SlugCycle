@@ -38,7 +38,6 @@
       <div class="map-container col-md-8 col-md-offset-2">
             {{#unless geolocationError}}
               {{> googleMap name="map" options=mapOptions}}
-			  {{> marker_editor}}
             {{else}}
               Geolocation failed: {{geolocationError}}
             {{/unless}}

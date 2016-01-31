@@ -1,6 +1,9 @@
 default_behavior = {
-	marker_click: function(marker, event){
-		Session.set("map.current_marker", marker);
+    map_clicked: function(event){
+        Session.set("map.current_marker", "");
+    },
+	marker_clicked: function(marker, event){
+		Session.set("map.current_marker", marker.id);
 	},
 	marker_release: function(marker, event){
 		Waypoints.update(marker.id, { $set: 
@@ -12,7 +15,7 @@ default_behavior = {
 tools = {
     add_marker: { text: "Add Marker", 
         map_clicked: function(event) {
-            Waypoints.insert(
+            var id = Waypoints.insert(
                 { 
                   lat: event.latLng.lat(), 
                   lng: event.latLng.lng(),
@@ -21,6 +24,7 @@ tools = {
                   message: "Something is happening near you!"
                 }
             );
+            Session.set("map.current_marker", id);
         }
     },
     remove_marker: { text: "Remove Marker",
