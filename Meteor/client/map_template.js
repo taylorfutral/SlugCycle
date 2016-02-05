@@ -1,4 +1,4 @@
-﻿/** Polyfill: Converts numeric degrees to radians */
+/** Polyfill: Converts numeric degrees to radians */
 if (typeof(Number.prototype.toRadians) === "undefined") {
   Number.prototype.toRadians = function() {
     return this * Math.PI / 180;
@@ -273,7 +273,7 @@ Template.map.onCreated(function() {
 			};
         }).bufferingThrottle(1000.0).onValue(function(args){
             console.log("sending SMS from client:",args);
-            Meteor.call("send_SMS", "8317138143", "Hazard approx. "+args.distance+" feet away.");            
+            Meteor.call("send_SMS", "9253213959", "Hazard approx. "+args.distance+" feet away.");            
         });
         //Meteor.call("send_SMS", "8313255847", marker.position.toString());
     });
